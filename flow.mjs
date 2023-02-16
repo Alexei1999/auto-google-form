@@ -59,63 +59,73 @@ export async function formFlow(
       }
 
       const averageProbability = 100 / items.length;
-
-      const [avergProb, maxCount] = probabilities
-        ? mostFrequent(Array.from(probabilities))
-        : [averageProbability, items.length];
-
       const random = Math.floor(Math.random() * 100);
 
-      let minProbability = null;
-      let maxProbability = null;
+      logger.info("Random: " + random);
+
+      let minRightProbability = null;
+      let maxLeftProbability = null;
       let choiced = false;
       let choiceNumber = 0;
-      let averageAcquaintance = 0;
+
+      const repeates = {};
 
       for (let j = 0; j < items.length; j++) {
         const item = items[j];
         const probability = probabilities && probabilities[j + 1];
 
+        const clickItem = async () => {
+          await item.click();
+          await new Promise((r) => setTimeout(r, 300));
+        };
+
         let targetProbability =
           typeof probability !== "number" ? averageProbability : probability;
 
-        if (maxCount > 1 && avergProb === targetProbability) {
-          averageAcquaintance++;
+        debugger;
 
-          targetProbability = targetProbability * averageAcquaintance;
+        if (!repeates[targetProbability]) {
+          repeates[targetProbability] = 1;
+        } else {
+          repeates[targetProbability] = repeates[targetProbability] + 1;
         }
 
-        if (maxProbability === null || targetProbability > maxProbability) {
-          maxProbability = targetProbability;
-        }
-        if (minProbability === null || targetProbability < minProbability) {
-          minProbability = targetProbability;
-        }
+        targetProbability = targetProbability * repeates[targetProbability];
 
         if (
-          targetProbability > random &&
-          targetProbability === minProbability
+          targetProbability >= random &&
+          (minRightProbability === null ||
+            targetProbability < minRightProbability)
         ) {
-          await item.click();
-          choiced = true;
-          choiceNumber = j;
+          minRightProbability = targetProbability;
+
+          if (targetProbability !== random) {
+            await clickItem();
+
+            choiced = true;
+            choiceNumber = j;
+          }
 
           continue;
         }
 
         if (
-          targetProbability < random &&
-          targetProbability === maxProbability
+          targetProbability <= random &&
+          (maxLeftProbability === null ||
+            targetProbability > maxLeftProbability)
         ) {
-          await item.click();
-          choiced = true;
-          choiceNumber = j;
+          maxLeftProbability = targetProbability;
 
-          continue;
+          if (!choiced && targetProbability !== random) {
+            await clickItem();
+
+            choiceNumber = j;
+            continue;
+          }
         }
 
         if (!choiced) {
-          await item.click();
+          await clickItem();
           choiceNumber = j;
         }
       }

@@ -41,7 +41,9 @@ export const createLoggers = (flowNumber, iterationNumber) => {
   return {
     error: (str) =>
       console.log(
-        chulkLogger(`[${chalk.redBright("ERROR")}]  ${prefix}: ${str}`)
+        chulkLogger(
+          `[${chalk.redBright("ERROR")}]  ${prefix}: ${chalk.redBright(str)}`
+        )
       ),
     warn: (str) =>
       console.log(

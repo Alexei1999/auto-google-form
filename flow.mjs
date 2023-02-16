@@ -5,8 +5,12 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { metaConfig, probabilitiesConfig } from "./constants.mjs";
-import { createLoggers, mostFrequent } from "./lib.mjs";
+import {
+  metaConfig,
+  probabilitiesConfig,
+  randomScattering,
+} from "./constants.mjs";
+import { createLoggers } from "./lib.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,12 +47,11 @@ export async function formFlow(
     for (let i = 0; i < elements.length; i++) {
       logger.info("Process question: " + i);
 
+      const probabilities = probabilitiesConfig[i + 1];
+      const meta = metaConfig[i + 1];
       const element = elements[i];
 
       const items = [...(await element.$$("label"))];
-
-      const probabilities = probabilitiesConfig[i + 1];
-      const meta = metaConfig[i + 1];
 
       if (meta && meta.ignoreLast) {
         items.pop();
@@ -58,79 +61,93 @@ export async function formFlow(
         continue;
       }
 
-      const averageProbability = 100 / items.length;
+      const averageProbability =
+        100 /
+        (items.filter((_, i) => !probabilities[i]).length || items.length);
       const random = Math.floor(Math.random() * 100);
 
       logger.info("Random: " + random);
 
-      let minRightProbability = null;
-      let maxLeftProbability = null;
-      let choiced = false;
-      let choiceNumber = 0;
-
-      const repeates = {};
-
-      for (let j = 0; j < items.length; j++) {
-        const item = items[j];
+      let mappedItems = [...items].map((item, j) => {
         const probability = probabilities && probabilities[j + 1];
 
-        const clickItem = async () => {
-          await item.click();
-          await new Promise((r) => setTimeout(r, 300));
-        };
-
-        let targetProbability =
+        const targetProbability =
           typeof probability !== "number" ? averageProbability : probability;
 
-        debugger;
+        return {
+          item,
+          probability: targetProbability,
+        };
+      });
 
-        if (!repeates[targetProbability]) {
-          repeates[targetProbability] = 1;
-        } else {
-          repeates[targetProbability] = repeates[targetProbability] + 1;
-        }
-
-        targetProbability = targetProbability * repeates[targetProbability];
-
-        if (
-          targetProbability >= random &&
-          (minRightProbability === null ||
-            targetProbability < minRightProbability)
-        ) {
-          minRightProbability = targetProbability;
-
-          if (targetProbability !== random) {
-            await clickItem();
-
-            choiced = true;
-            choiceNumber = j;
-          }
-
-          continue;
-        }
-
-        if (
-          targetProbability <= random &&
-          (maxLeftProbability === null ||
-            targetProbability > maxLeftProbability)
-        ) {
-          maxLeftProbability = targetProbability;
-
-          if (!choiced && targetProbability !== random) {
-            await clickItem();
-
-            choiceNumber = j;
+      if (!meta?.fixedProb && mappedItems.length > 1) {
+        for (let i = 0; i < mappedItems.length; i++) {
+          if (i === mappedItems.length - 1) {
             continue;
           }
-        }
 
-        if (!choiced) {
-          await clickItem();
-          choiceNumber = j;
+          let sacttering = Math.floor(Math.random() * randomScattering);
+
+          const numberOverflow = mappedItems[0].probability < sacttering;
+
+          if (!numberOverflow && Math.random() > 0.5) {
+            sacttering *= -1;
+          }
+
+          mappedItems[i].probability += sacttering;
+          mappedItems[i + 1].probability -= sacttering;
         }
       }
 
-      logger.success("Option clicked: " + choiceNumber);
+      mappedItems = mappedItems.sort(
+        (item1, item2) => item1.probability - item2.probability
+      );
+
+      mappedItems.reduce((acc, item) => {
+        const sum = acc + item.probability;
+
+        item.init = item.probability;
+        item.probability = sum;
+
+        return sum;
+      }, 0);
+
+      let minRightElIdx = null;
+      let maxLeftElIdx = null;
+
+      let choiced = false;
+
+      mappedItems.forEach((item, j) => {
+        const targetProbability = item.probability;
+
+        if (
+          targetProbability >= random &&
+          (minRightElIdx === null ||
+            targetProbability < mappedItems[minRightElIdx])
+        ) {
+          minRightElIdx = j;
+
+          return;
+        }
+
+        if (
+          !choiced &&
+          targetProbability <= random &&
+          (maxLeftElIdx === null ||
+            targetProbability > mappedItems[maxLeftElIdx])
+        ) {
+          maxLeftElIdx = j;
+
+          return;
+        }
+      });
+
+      const targetIndex = minRightElIdx === null ? maxLeftElIdx : minRightElIdx;
+
+      await mappedItems[targetIndex].item.click();
+      await new Promise((r) => setTimeout(r, 300));
+
+      logger.success("Option clicked: " + targetIndex);
     }
 
     logger.success("Form filled");
@@ -150,7 +167,7 @@ export async function formFlow(
   }
 }
 
-export const runFlowSeries = async (howMuch, divider = 25) => {
+export const runFlowSeries = async (howMuch, divider = 35) => {
   const iterations = Math.ceil(howMuch / divider);
   const launches = Math.ceil(howMuch / iterations);
 

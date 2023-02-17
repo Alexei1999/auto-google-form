@@ -1,54 +1,55 @@
 import puppeteer from "puppeteer";
+import { createLoggers } from "../lib.mjs";
 
-import yaml from "js-yaml";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-import {
-  metaConfig,
+export async function formFlow({
+  flowPrefix = "-",
+  iterationPrefix,
+  headless = true,
+  varConfig,
+  processConfig,
   probabilitiesConfig,
   randomScattering,
-} from "./constants.mjs";
-import { createLoggers } from "./lib.mjs";
+  loggersConfig = createLoggers,
+}) {
+  if (!varConfig) {
+    throw new Error("varConfig must be defined");
+  }
+  if (!processConfig) {
+    throw new Error("processConfig must be defined");
+  }
+  if (!probabilitiesConfig) {
+    throw new Error("probabilitiesConfig must be defined");
+  }
+  if (!randomScattering) {
+    throw new Error("randomScattering must be defined");
+  }
+  if (!loggersConfig) {
+    throw new Error("loggersConfig must be defined");
+  }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const config = yaml.load(
-  fs.readFileSync(path.resolve(__dirname, "./config.yaml"), "utf8")
-);
-
-export async function formFlow(
-  flowNumber = "-",
-  iterationNumber = "-",
-  headless = true
-) {
-  const logger = createLoggers(flowNumber, iterationNumber);
+  const logger = createLoggers(flowPrefix, iterationPrefix);
 
   logger.info("Starting: browser");
-
   const browser = await puppeteer.launch({ headless });
 
   logger.info("Starting: page");
-
   const page = await browser.newPage();
 
   logger.finallSuccess("Started");
 
   try {
-    await page.goto(config.formLink);
+    await page.goto(varConfig.formLink);
 
-    logger.info("Form opened");
-
+    logger.info("Form has opened");
     await page.waitForSelector("form");
 
     const elements = await page.$$('[role="listitem"]');
 
     for (let i = 0; i < elements.length; i++) {
-      logger.info("Process question: " + i);
+      logger.info("Procesing question: " + i);
 
       const probabilities = probabilitiesConfig[i + 1];
-      const meta = metaConfig[i + 1];
+      const meta = processConfig[i + 1];
       const element = elements[i];
 
       const items = [...(await element.$$("label"))];
@@ -106,6 +107,7 @@ export async function formFlow(
       mappedItems.reduce((acc, item) => {
         const sum = acc + item.probability;
 
+        // @ts-ignore
         item.init = item.probability;
         item.probability = sum;
 
@@ -123,7 +125,7 @@ export async function formFlow(
         if (
           targetProbability >= random &&
           (minRightElIdx === null ||
-            targetProbability < mappedItems[minRightElIdx])
+            targetProbability < mappedItems[minRightElIdx].probability)
         ) {
           minRightElIdx = j;
 
@@ -134,7 +136,7 @@ export async function formFlow(
           !choiced &&
           targetProbability <= random &&
           (maxLeftElIdx === null ||
-            targetProbability > mappedItems[maxLeftElIdx])
+            targetProbability > mappedItems[maxLeftElIdx].probability)
         ) {
           maxLeftElIdx = j;
 
@@ -150,14 +152,14 @@ export async function formFlow(
       logger.success("Option clicked: " + targetIndex);
     }
 
-    logger.success("Form filled");
+    logger.success("Form has filled");
 
     const buttons = await page.$$('[role="button"]');
     await buttons[27].click();
 
     await page.waitForNavigation({ waitUntil: "networkidle0" });
 
-    logger.finallSuccess("Form finished");
+    logger.finallSuccess("Form has finished");
   } catch (error) {
     logger.error(error.message);
 
@@ -166,24 +168,3 @@ export async function formFlow(
     await browser.close();
   }
 }
-
-export const runFlowSeries = async (howMuch, divider = 35) => {
-  const iterations = Math.ceil(howMuch / divider);
-  const launches = Math.ceil(howMuch / iterations);
-
-  for (let iteration of Array(iterations).keys()) {
-    console.log(`Iteration number: ${iteration}`);
-
-    await Promise.allSettled(
-      [...Array(launches).keys()].map((i) =>
-        formFlow(`${i}/${launches - 1}`, `${iteration}/${iterations - 1}`)
-      )
-    ).then((results) => {
-      const rejectedCount = results.filter(
-        (result) => result.status === "rejected"
-      ).length;
-
-      console.log(`Number of rejected promises: ${rejectedCount}`);
-    });
-  }
-};

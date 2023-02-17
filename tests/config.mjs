@@ -1,4 +1,4 @@
-export const randomScattering = 5;
+export const scatteringValue = 5;
 
 export const metaConfig = {
   1: {

@@ -1,43 +1,19 @@
 import chalk from "chalk";
 
-export function logWithRandomColor() {
-  return chalk.rgb(
+export const createLoggers = (flowPrefix, iterationPrefix) => {
+  const chulkLogger = chalk.rgb(
     Math.floor(Math.random() * 256),
     Math.floor(Math.random() * 256),
     Math.floor(Math.random() * 256)
   );
-}
 
-export function mostFrequent(arr) {
-  let hash = new Map();
+  const prefix = [
+    flowPrefix && `[${chalk.white(flowPrefix)}]`,
+    iterationPrefix && `[${chalk.white(iterationPrefix)}]`,
+  ]
+    .filter(Boolean)
+    .join("");
 
-  for (let i = 0; i < arr.length; i++) {
-    if (hash.has(arr[i])) {
-      hash.set(arr[i], hash.get(arr[i]) + 1);
-    } else {
-      hash.set(arr[i], 1);
-    }
-  }
-
-  let maxCount = 0;
-  let res = -1;
-
-  hash.forEach((value, key) => {
-    if (maxCount < value) {
-      res = key;
-      maxCount = value;
-    }
-  });
-
-  return [res, maxCount];
-}
-
-export const createLoggers = (flowNumber, iterationNumber) => {
-  const chulkLogger = logWithRandomColor();
-
-  const prefix = `[${chalk.white(flowNumber)}][${chalk.white(
-    iterationNumber
-  )}]`;
   return {
     error: (str) =>
       console.log(
@@ -67,5 +43,3 @@ export const createLoggers = (flowNumber, iterationNumber) => {
       ),
   };
 };
-
-export const cameTrue = (prob) => Math.random() < prob / 100;

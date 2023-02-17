@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.mjs",
   "scripts": {
-    "start": "node ./index.mjs"
+    "test": "node ./tests/index.mjs"
   },
   "keywords": [],
   "author": "",

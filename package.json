@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.mjs",
   "scripts": {
-    "test": "node ./tests/index.mjs"
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -12,8 +12,10 @@
   "dependencies": {
     "chalk": "^5.2.0",
     "dayjs": "^1.11.7",
-    "js-yaml": "^4.1.0",
     "poisson-process": "^1.0.1",
     "puppeteer": "^19.7.0"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.0"
   }
 }

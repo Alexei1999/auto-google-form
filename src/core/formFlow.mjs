@@ -8,7 +8,7 @@ export async function formFlow({
   varConfig,
   processConfig,
   probabilitiesConfig,
-  randomScattering,
+  scatteringValue,
   loggersConfig = createLoggers,
 }) {
   if (!varConfig) {
@@ -20,8 +20,8 @@ export async function formFlow({
   if (!probabilitiesConfig) {
     throw new Error("probabilitiesConfig must be defined");
   }
-  if (!randomScattering) {
-    throw new Error("randomScattering must be defined");
+  if (!scatteringValue) {
+    throw new Error("scatteringValue must be defined");
   }
   if (!loggersConfig) {
     throw new Error("loggersConfig must be defined");
@@ -46,7 +46,9 @@ export async function formFlow({
     const elements = await page.$$('[role="listitem"]');
 
     for (let i = 0; i < elements.length; i++) {
-      logger.info("Procesing question: " + i);
+      const random = Math.floor(Math.random() * 100);
+
+      logger.info(`Procesing question: ${i}, random: ${random}`);
 
       const probabilities = probabilitiesConfig[i + 1];
       const meta = processConfig[i + 1];
@@ -62,12 +64,18 @@ export async function formFlow({
         continue;
       }
 
-      const averageProbability =
-        100 /
-        (items.filter((_, i) => !probabilities[i]).length || items.length);
-      const random = Math.floor(Math.random() * 100);
+      const emptyProbabilityTotal = items.reduce((probability, _, i) => {
+        if (!probabilities || !probabilities[i + 1]) {
+          return probability;
+        }
 
-      logger.info("Random: " + random);
+        return probability - probabilities[i + 1];
+      }, 100);
+
+      const averageProbability =
+        (emptyProbabilityTotal || 100) /
+        (items.filter((_, i) => !probabilities || !probabilities[i + 1])
+          .length || items.length);
 
       let mappedItems = [...items].map((item, j) => {
         const probability = probabilities && probabilities[j + 1];
@@ -87,7 +95,7 @@ export async function formFlow({
             continue;
           }
 
-          let sacttering = Math.floor(Math.random() * randomScattering);
+          let sacttering = Math.floor(Math.random() * scatteringValue);
 
           const numberOverflow = mappedItems[0].probability < sacttering;
 

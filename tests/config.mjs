@@ -1,6 +1,6 @@
 export const scatteringValue = 5;
 
-export const metaConfig = {
+export const processConfig = {
   1: {
     fixedProb: true,
   },
@@ -15,6 +15,7 @@ export const metaConfig = {
   },
 };
 
+// INFO: You can skip blocks, the probability will be distributed equally
 export const probabilitiesConfig = {
   1: {
     1: 48,

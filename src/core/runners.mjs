@@ -1,28 +1,34 @@
 import chalk from "chalk";
-import * as dayjs from "dayjs";
-import { Dayjs } from "dayjs";
 import { formFlow } from "./formFlow.mjs";
 // @ts-ignore
 import poisson from "poisson-process";
+// @ts-ignore
+import dayjs from "dayjs";
 
 const runFormPeriodic = async (
+  /** @type {any} */ flowConfig,
   /** @type {number} */ howMuch,
-  /** @type {number} */ averageCallPeriodMs,
-  /** @type {any} */ flowConfig
+  /** @type {number} */ averageCallPeriodMs
 ) => {
-  const logTime = (/** @type {Dayjs} */ nextTime) => {
-    const diffInMilliseconds = dayjs().diff(nextTime);
+  const logTime = (/** @type {dayjs.Dayjs} */ nextTime) => {
+    const diffInMilliseconds = dayjs(nextTime).diff(dayjs());
 
     const diffInSeconds = diffInMilliseconds / 1000;
     const minutes = Math.floor(diffInSeconds / 60);
-    const seconds = diffInSeconds % 60;
+    const seconds = Math.floor(diffInSeconds % 60);
+
+    if (diffInMilliseconds < 0) {
+      console.log(chalk.cyan(`Next task isn't scheduled`));
+
+      return;
+    }
 
     console.log(
       chalk.cyanBright(`Next task in ${minutes} min and ${seconds} sec`)
     );
   };
 
-  let counter = 0;
+  let counter = 1;
   let init = false;
 
   let nextTime = dayjs();
@@ -50,13 +56,13 @@ const runFormPeriodic = async (
         resolve();
       }, addTime);
     });
-  } while (counter <= howMuch);
+  } while (counter < howMuch);
 };
 
 const runFormSeries = async (
+  /** @type {any} */ flowConfig,
   /** @type {number} */ howMuch,
-  chunkSize = 35,
-  /** @type {any} */ flowConfig
+  chunkSize = 35
 ) => {
   const iterations = Math.ceil(howMuch / chunkSize);
   const launches = Math.ceil(howMuch / iterations);

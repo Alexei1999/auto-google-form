@@ -15,31 +15,36 @@ export const createLoggers = (flowPrefix, iterationPrefix) => {
     .join("");
 
   return {
-    error: (str) =>
+    error: (str = "", notFormattedStr = "") =>
       console.log(
         chulkLogger(
           `[${chalk.redBright("ERROR")}]  ${prefix}: ${chalk.redBright(str)}`
-        )
+        ),
+        notFormattedStr
       ),
-    warn: (str) =>
+    warn: (str = "", notFormattedStr = "") =>
       console.log(
-        chulkLogger(`[${chalk.yellowBright("WARN")}]   ${prefix}: ${str}`)
+        chulkLogger(`[${chalk.yellowBright("WARN")}]   ${prefix}: ${str}`),
+        notFormattedStr
       ),
-    info: (str) =>
+    info: (str = "", notFormattedStr = "") =>
       console.log(
-        chulkLogger(`[${chalk.blueBright("INFO")}]   ${prefix}: ${str}`)
+        chulkLogger(`[${chalk.blueBright("INFO")}]   ${prefix}: ${str}`),
+        notFormattedStr
       ),
-    success: (str) =>
+    success: (str = "", notFormattedStr = "") =>
       console.log(
-        chulkLogger(`[${chalk.greenBright("SUCCESS")}]${prefix}: ${str}`)
+        chulkLogger(`[${chalk.greenBright("SUCCESS")}]${prefix}: ${str}`),
+        notFormattedStr
       ),
-    finallSuccess: (str) =>
+    finallSuccess: (str = "", notFormattedStr = "") =>
       console.log(
         chulkLogger(
           `[${chalk.greenBright("SUCCESS")}]${prefix}: ${chalk.greenBright(
             str
           )}`
-        )
+        ),
+        notFormattedStr
       ),
   };
 };

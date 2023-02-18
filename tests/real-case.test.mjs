@@ -25,18 +25,15 @@ const configs = {
   processConfig,
 };
 
-// "passForm should work correctly",
-googleAutoForm.passForm({ ...configs, headless: false });
+const time = 6 * 60 * 1000;
 
-// "runSeries should work correctly"
-googleAutoForm.runSeries(configs, 10, 5);
+const dateFrom = dayjs().set("hour", 18).startOf("minute").startOf("second");
+const dateTo = dayjs()
+  .add(1, "day")
+  .set("hour", 10)
+  .endOf("minute")
+  .endOf("second");
 
-// "runPeriodic should work correctly"
-const time = 1 * 60 * 1000;
-
-googleAutoForm.runPeriodic(configs, 5, time, {
-  shutdownRange: () => [
-    dayjs().startOf("minute").startOf("second"),
-    dayjs().add(1, "minute"),
-  ],
+googleAutoForm.runPeriodic(configs, 278, time, {
+  shutdownRange: () => [dateFrom, dateTo],
 });

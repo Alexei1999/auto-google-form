@@ -46,48 +46,87 @@ export async function formFlow({
     const elements = await page.$$('[role="listitem"]');
 
     for (let i = 0; i < elements.length; i++) {
-      const random = Math.floor(Math.random() * 100);
-
-      logger.info(`Procesing question: ${i}, random: ${random}`);
-
       const probabilities = probabilitiesConfig[i + 1];
       const meta = processConfig[i + 1];
       const element = elements[i];
 
-      const items = [...(await element.$$("label"))];
+      const htmlElements = await element.$$("label");
 
-      if (meta && meta.ignoreLast) {
-        items.pop();
+      const inputWrapper =
+        meta?.hasInput && (await htmlElements.pop().getProperty("parentNode"));
+      const input = inputWrapper && (await inputWrapper.$("input"));
+      const inputLabel = inputWrapper && (await inputWrapper.$("label"));
+
+      let items = [...htmlElements].map((element) => ({
+        $: element,
+      }));
+
+      if (probabilities && input) {
+        const writeItems = Object.values(probabilities).filter(
+          (item) => item.writeItems?.length
+        );
+
+        if (writeItems.length) {
+          items = items.concat(writeItems);
+        }
       }
 
       if (!items.length) {
         continue;
       }
 
-      const emptyProbabilityTotal = items.reduce((probability, _, i) => {
-        if (!probabilities || !probabilities[i + 1]) {
+      let emptyProbabilityTotal = items.reduce((probability, _, i) => {
+        const targetProbability =
+          probabilities &&
+          (typeof probabilities[i + 1] === "number"
+            ? probabilities[i + 1]
+            : probabilities[i + 1]?.probability);
+
+        if (!targetProbability) {
           return probability;
         }
 
-        return probability - probabilities[i + 1];
+        return probability - targetProbability;
       }, 100);
 
-      const averageProbability =
-        (emptyProbabilityTotal || 100) /
-        (items.filter((_, i) => !probabilities || !probabilities[i + 1])
-          .length || items.length);
+      if (emptyProbabilityTotal < 0) {
+        emptyProbabilityTotal = 0;
+      }
 
-      let mappedItems = [...items].map((item, j) => {
-        const probability = probabilities && probabilities[j + 1];
+      const averageProbability =
+        emptyProbabilityTotal === 0
+          ? 0
+          : emptyProbabilityTotal /
+            ((probabilities &&
+              items.filter((_, i) =>
+                typeof probabilities[i + 1] === "number"
+                  ? probabilities[i + 1]
+                  : !probabilities[i + 1]?.probability
+              ).length) ||
+              1);
+
+      let mappedItems = items.map((item, j) => {
+        const probability =
+          typeof probabilities?.[j + 1]?.probability === "number"
+            ? probabilities?.[j + 1]?.probability
+            : probabilities?.[j + 1];
 
         const targetProbability =
           typeof probability !== "number" ? averageProbability : probability;
 
         return {
-          item,
+          ...item,
           probability: targetProbability,
         };
       });
+
+      const maxProbability = Math.max(
+        100,
+        ...mappedItems.map((item) => item.probability)
+      );
+
+      const random = Math.floor(Math.random() * maxProbability);
+      logger.info(`Procesing question: ${i}, random: ${random}`);
 
       if (!meta?.fixedProb && mappedItems.length > 1) {
         for (let i = 0; i < mappedItems.length; i++) {
@@ -95,16 +134,26 @@ export async function formFlow({
             continue;
           }
 
-          let sacttering = Math.floor(Math.random() * scatteringValue);
+          let subValue = 0;
 
-          const numberOverflow = mappedItems[0].probability < sacttering;
+          if (Math.random() < 0.5) {
+            const minValue = Math.min(
+              mappedItems[i].probability,
+              scatteringValue
+            );
 
-          if (!numberOverflow && Math.random() > 0.5) {
-            sacttering *= -1;
+            subValue = -1 * Math.random() * minValue;
+          } else {
+            const minValue = Math.min(
+              mappedItems[i + 1].probability,
+              scatteringValue
+            );
+
+            subValue = Math.random() * minValue;
           }
 
-          mappedItems[i].probability += sacttering;
-          mappedItems[i + 1].probability -= sacttering;
+          mappedItems[i].probability += subValue;
+          mappedItems[i + 1].probability -= subValue;
         }
       }
 
@@ -153,11 +202,33 @@ export async function formFlow({
       });
 
       const targetIndex = minRightElIdx === null ? maxLeftElIdx : minRightElIdx;
+      const targetItem = mappedItems[targetIndex];
 
-      await mappedItems[targetIndex].item.click();
+      // @ts-ignore
+      if (input && targetItem.writeItems) {
+        const randomIndex = Math.floor(
+          // @ts-ignore
+          Math.random() * targetItem.writeItems.length
+        );
+
+        await inputLabel.click();
+        input.focus();
+        // @ts-ignore
+        await page.keyboard.type(targetItem.writeItems[randomIndex]);
+        logger.success(
+          "Value writed:",
+          // @ts-ignore
+          targetItem.writeItems[randomIndex]
+        );
+      }
+
+      if (targetItem.$) {
+        await targetItem.$.click();
+
+        logger.success("Option clicked: " + targetIndex);
+      }
+
       await new Promise((r) => setTimeout(r, 300));
-
-      logger.success("Option clicked: " + targetIndex);
     }
 
     logger.success("Form has filled");

@@ -5,17 +5,45 @@ import poisson from "poisson-process";
 // @ts-ignore
 import dayjs from "dayjs";
 
+const giveDiffLog = (/** @type {number} */ ms) => {
+  const diffInSeconds = ms / 1000;
+
+  const seconds = diffInSeconds % 60;
+  const minutes = Math.floor(diffInSeconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  const firstOutput = [
+    days && `${days} days`,
+    hours && `${hours} hs`,
+    minutes && `${minutes} min`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const secondOutput = `${firstOutput ? ` and ` : ""}${Math.floor(
+    seconds
+  )} sec`;
+
+  return {
+    seconds,
+    minutes,
+    hours,
+    days,
+    output: firstOutput + secondOutput,
+  };
+};
+
+const format = "DD.MM.YYYY hh:mm";
+
 const runFormPeriodic = async (
   /** @type {any} */ flowConfig,
   /** @type {number} */ howMuch,
-  /** @type {number} */ averageCallPeriodMs
+  /** @type {number} */ averageCallPeriodMs,
+  { shutdownRange } = { shutdownRange: undefined }
 ) => {
   const logTime = (/** @type {dayjs.Dayjs} */ nextTime) => {
     const diffInMilliseconds = dayjs(nextTime).diff(dayjs());
-
-    const diffInSeconds = diffInMilliseconds / 1000;
-    const minutes = Math.floor(diffInSeconds / 60);
-    const seconds = Math.floor(diffInSeconds % 60);
 
     if (diffInMilliseconds < 0) {
       console.log(chalk.cyan(`Next task isn't scheduled`));
@@ -23,12 +51,19 @@ const runFormPeriodic = async (
       return;
     }
 
+    const { output } = giveDiffLog(diffInMilliseconds);
+
     console.log(
-      chalk.cyanBright(`Next task in ${minutes} min and ${seconds} sec`)
+      chalk.cyanBright(
+        `[${dayjs().format(format)}]: Next task in ${output} (${nextTime.format(
+          format
+        )})`
+      )
     );
   };
 
-  let counter = 1;
+  let isShutdonwed = false;
+  let counter = 0;
   let init = false;
 
   let nextTime = dayjs();
@@ -38,23 +73,53 @@ const runFormPeriodic = async (
       const addTime = poisson.sample(averageCallPeriodMs);
       nextTime = dayjs().add(addTime, "ms");
 
-      if (!init) {
-        logTime(nextTime);
-      }
+      let range =
+        typeof shutdownRange === "function" ? shutdownRange() : shutdownRange;
 
-      setTimeout(() => {
-        init = true;
+      if (
+        range &&
+        dayjs(range[0]).isBefore(dayjs()) &&
+        dayjs(range[1]).isAfter(dayjs())
+      ) {
+        isShutdonwed = true;
 
-        formFlow({
-          flowPrefix: counter,
-          ...flowConfig,
-        }).then(() => {
+        const { output } = giveDiffLog(dayjs(nextTime).diff(dayjs()));
+
+        const prefix = `[${dayjs().format(format)}]`;
+
+        console.log(
+          chalk.yellow(
+            `${prefix} Sleeping for ${output} (${nextTime.format(format)})`
+          )
+        );
+        console.log(
+          chalk.yellow(
+            `${" ".repeat(prefix.length)} Shutdown bounds: [${dayjs(
+              range[0]
+            ).format(format)} | ${dayjs(range[1]).format(format)}]`
+          )
+        );
+
+        setTimeout(resolve, addTime);
+      } else {
+        if (!init) {
           logTime(nextTime);
-          counter++;
-        });
+        }
 
-        resolve();
-      }, addTime);
+        setTimeout(() => {
+          init = true;
+
+          formFlow({
+            flowPrefix: counter,
+            ...flowConfig,
+          }).then(() => {
+            logTime(nextTime);
+          });
+
+          counter++;
+          resolve();
+        }, addTime);
+      }
     });
   } while (counter < howMuch);
 };

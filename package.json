@@ -2,9 +2,8 @@
   "name": "auto-google-form",
   "version": "1.0.0",
   "description": "",
-  "main": "index.mjs",
   "scripts": {
-    "test": "jest"
+    "test": "node ./tests/index.test.mjs"
   },
   "keywords": [],
   "author": "",

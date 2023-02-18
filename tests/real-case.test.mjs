@@ -25,12 +25,13 @@ const configs = {
   processConfig,
 };
 
+// 10 tests per hour
 const time = 6 * 60 * 1000;
 
 googleAutoForm.runPeriodic(configs, 278, time, {
   shutdownRange: () => {
     const dateFrom = dayjs().hour(18).minute(0).second(0);
-    const dateTo = dayjs().add(1, "day").hour(10).minute(0).second(0);
+    const dateTo = dayjs().add(1, "day").hour(8).minute(0).second(0);
 
     return [dateFrom, dateTo];
   },

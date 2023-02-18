@@ -27,13 +27,11 @@ const configs = {
 
 const time = 6 * 60 * 1000;
 
-const dateFrom = dayjs().set("hour", 18).startOf("minute").startOf("second");
-const dateTo = dayjs()
-  .add(1, "day")
-  .set("hour", 10)
-  .endOf("minute")
-  .endOf("second");
-
 googleAutoForm.runPeriodic(configs, 278, time, {
-  shutdownRange: () => [dateFrom, dateTo],
+  shutdownRange: () => {
+    const dateFrom = dayjs().hour(18).minute(0).second(0);
+    const dateTo = dayjs().add(1, "day").hour(10).minute(0).second(0);
+
+    return [dateFrom, dateTo];
+  },
 });

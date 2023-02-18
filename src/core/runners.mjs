@@ -4,6 +4,7 @@ import { formFlow } from "./formFlow.mjs";
 import poisson from "poisson-process";
 // @ts-ignore
 import dayjs from "dayjs";
+import { format } from "../constants.mjs";
 
 const giveDiffLog = (/** @type {number} */ ms) => {
   const diffInSeconds = ms / 1000;
@@ -34,7 +35,7 @@ const giveDiffLog = (/** @type {number} */ ms) => {
   };
 };
 
-const format = "DD.MM.YYYY hh:mm";
+
 
 const runFormPeriodic = async (
   /** @type {any} */ flowConfig,

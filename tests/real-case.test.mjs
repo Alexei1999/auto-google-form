@@ -34,8 +34,8 @@ googleAutoForm.runPeriodic(configs, 200, time, {
 
     return [
       dayjsRes.hour(0),
-      dayjsRes.hour(8),
-      dayjsRes.hour(20),
+      dayjsRes.hour(12),
+      dayjsRes.hour(22),
       dayjsRes.hour(24),
     ];
   },

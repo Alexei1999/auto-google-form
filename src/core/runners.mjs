@@ -104,11 +104,16 @@ const runFormPeriodic = async (
         );
         console.log(
           chalk.yellow(
-            `${" ".repeat(prefix.length)}Shutdown bounds number ${Math.floor(
-              targetRangeIndex / 2
-            )}: [${dayjs(targetRange[0]).format(format)} | ${dayjs(
-              targetRange[1]
-            ).format(format)}]`
+            `${" ".repeat(prefix.length)}Shutdown bounds number ${
+              Math.floor(targetRangeIndex / 2) + 1
+            }`
+          )
+        );
+        console.log(
+          chalk.yellow(
+            `${" ".repeat(prefix.length)}[${dayjs(targetRange[0]).format(
+              format
+            )}] | [${dayjs(targetRange[1]).format(format)}]`
           )
         );
 
@@ -122,7 +127,7 @@ const runFormPeriodic = async (
           init = true;
 
           formFlow({
-            flowPrefix: counter,
+            flowPrefix: counter + 1,
             ...flowConfig,
           })
             .then(() => {
@@ -155,8 +160,8 @@ const runFormSeries = async (
     await Promise.allSettled(
       [...Array(launches).keys()].map((i) =>
         formFlow({
-          flowPrefix: `${i}/${launches - 1}`,
-          iterationPrefix: `${iteration}/${iterations - 1}`,
+          flowPrefix: `${i + 1}/${launches}`,
+          iterationPrefix: `${iteration + 1}/${iterations}`,
           ...flowConfig,
         })
       )

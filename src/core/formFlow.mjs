@@ -45,6 +45,10 @@ export async function formFlow({
 
     const elements = await page.$$('[role="listitem"]');
 
+    if (!elements.length) {
+      throw new Error('No elements found with role="listitem"');
+    }
+
     for (let i = 0; i < elements.length; i++) {
       const probabilities = probabilitiesConfig[i + 1];
       const meta = processConfig[i + 1];
@@ -234,6 +238,13 @@ export async function formFlow({
     logger.success("Form has filled");
 
     const buttons = await page.$$('[role="button"]');
+
+    if (!buttons[27]) {
+      throw new Error(
+        '27th button with role="button" suggested as submit button not found'
+      );
+    }
+
     await buttons[27].click();
 
     await page.waitForNavigation({ waitUntil: "networkidle0" });

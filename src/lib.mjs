@@ -2,6 +2,8 @@ import chalk from "chalk";
 // @ts-ignore
 import dayjs from "dayjs";
 
+const isDefined = (value) => value !== undefined && value !== null;
+
 export const createLoggers = (flowPrefix, iterationPrefix) => {
   const chulkLogger = chalk.rgb(
     Math.floor(Math.random() * 256),
@@ -10,8 +12,8 @@ export const createLoggers = (flowPrefix, iterationPrefix) => {
   );
 
   const prefix = [
-    flowPrefix && `[${chalk.white(flowPrefix)}]`,
-    iterationPrefix && `[${chalk.white(iterationPrefix)}]`,
+    isDefined(flowPrefix) && `[${chalk.white(flowPrefix)}]`,
+    isDefined(iterationPrefix) && `[${chalk.white(iterationPrefix)}]`,
   ]
     .filter(Boolean)
     .join("");

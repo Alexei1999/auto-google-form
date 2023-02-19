@@ -46,11 +46,14 @@ const runFormPeriodic = async (
     shutdownRanges: undefined,
   }
 ) => {
-  const logTime = (/** @type {dayjs.Dayjs} */ nextTime) => {
+  const logTime = (/** @type {dayjs.Dayjs} */ nextTime, errorTheme = false) => {
     const diffInMilliseconds = dayjs(nextTime).diff(dayjs());
 
+    const colorFunc = errorTheme ? chalk.magenta : chalk.cyan;
+    const colorBrightFunc = errorTheme ? chalk.magentaBright : chalk.cyanBright;
+
     if (diffInMilliseconds < 0) {
-      console.log(chalk.cyan(`Next task isn't scheduled`));
+      console.log(colorFunc(`Next task isn't scheduled`));
 
       return;
     }
@@ -58,7 +61,7 @@ const runFormPeriodic = async (
     const { output } = giveDiffLog(diffInMilliseconds);
 
     console.log(
-      chalk.cyanBright(
+      colorBrightFunc(
         `[${dayjs().format(format)}]: Next task in ${output} (${nextTime.format(
           format
         )})`
@@ -127,6 +130,7 @@ const runFormPeriodic = async (
             })
             .catch(() => {
               counter--;
+              logTime(nextTime, true);
             });
 
           counter++;

@@ -32,11 +32,17 @@ googleAutoForm.passForm({ ...configs, headless: false });
 googleAutoForm.runSeries(configs, 10, 5);
 
 // "runPeriodic should work correctly"
-const time = 1 * 60 * 1000;
+const time = 30 * 1000;
+
+const dayjsRes = dayjs().second(0);
 
 googleAutoForm.runPeriodic(configs, 5, time, {
-  shutdownRange: () => [
-    dayjs().startOf("minute").startOf("second"),
-    dayjs().add(1, "minute"),
+  shutdownRanges: () => [
+    dayjsRes.subtract(2, "day"),
+    dayjsRes.subtract(1, "day"),
+    dayjsRes,
+    dayjsRes.add(1, "minute"),
+    dayjsRes.add(1, "minute"),
+    dayjsRes.add(2, "minute"),
   ],
 });

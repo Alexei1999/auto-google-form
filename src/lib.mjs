@@ -1,4 +1,6 @@
 import chalk from "chalk";
+// @ts-ignore
+import dayjs from "dayjs";
 
 export const createLoggers = (flowPrefix, iterationPrefix) => {
   const chulkLogger = chalk.rgb(
@@ -47,4 +49,23 @@ export const createLoggers = (flowPrefix, iterationPrefix) => {
         notFormattedStr
       ),
   };
+};
+
+export const findTargetRangeIndex = (
+  /** @type { (dayjs.Dayjs)[]} */ ranges
+) => {
+  for (let i = 0; i < ranges.length; i += 2) {
+    if (i === ranges.length - 1) {
+      continue;
+    }
+
+    if (
+      dayjs(ranges[i]).isBefore(dayjs()) &&
+      dayjs(ranges[i + 1]).isAfter(dayjs())
+    ) {
+      return i;
+    }
+  }
+
+  return -1;
 };

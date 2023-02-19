@@ -29,10 +29,14 @@ const configs = {
 const time = 6 * 60 * 1000;
 
 googleAutoForm.runPeriodic(configs, 278, time, {
-  shutdownRange: () => {
-    const dateFrom = dayjs().hour(18).minute(0).second(0);
-    const dateTo = dayjs().add(1, "day").hour(8).minute(0).second(0);
+  shutdownRanges: () => {
+    const dayjsRes = dayjs().minute(0).second(0);
 
-    return [dateFrom, dateTo];
+    return [
+      dayjsRes.hour(0),
+      dayjsRes.hour(8),
+      dayjsRes.hour(20),
+      dayjsRes.hour(24),
+    ];
   },
 });

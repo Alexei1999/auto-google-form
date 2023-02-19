@@ -5,6 +5,7 @@ import poisson from "poisson-process";
 // @ts-ignore
 import dayjs from "dayjs";
 import { format } from "../constants.mjs";
+import { findTargetRangeIndex } from "../lib.mjs";
 
 const giveDiffLog = (/** @type {number} */ ms) => {
   const diffInSeconds = ms / 1000;
@@ -35,13 +36,15 @@ const giveDiffLog = (/** @type {number} */ ms) => {
   };
 };
 
-
-
 const runFormPeriodic = async (
   /** @type {any} */ flowConfig,
   /** @type {number} */ howMuch,
   /** @type {number} */ averageCallPeriodMs,
-  { shutdownRange } = { shutdownRange: undefined }
+  /** @type {{ shutdownRanges?: (() => (dayjs.Dayjs)[]) | (dayjs.Dayjs)[] }} */ {
+    shutdownRanges,
+  } = {
+    shutdownRanges: undefined,
+  }
 ) => {
   const logTime = (/** @type {dayjs.Dayjs} */ nextTime) => {
     const diffInMilliseconds = dayjs(nextTime).diff(dayjs());
@@ -63,7 +66,6 @@ const runFormPeriodic = async (
     );
   };
 
-  let isShutdonwed = false;
   let counter = 0;
   let init = false;
 
@@ -74,30 +76,36 @@ const runFormPeriodic = async (
       const addTime = poisson.sample(averageCallPeriodMs);
       nextTime = dayjs().add(addTime, "ms");
 
-      let range =
-        typeof shutdownRange === "function" ? shutdownRange() : shutdownRange;
+      const ranges =
+        typeof shutdownRanges === "function"
+          ? shutdownRanges()
+          : Array.isArray(shutdownRanges) && shutdownRanges;
 
-      if (
-        range &&
-        dayjs(range[0]).isBefore(dayjs()) &&
-        dayjs(range[1]).isAfter(dayjs())
-      ) {
-        isShutdonwed = true;
+      const targetRangeIndex = findTargetRangeIndex(ranges);
+      const isShutdowned =
+        typeof targetRangeIndex === "number" && targetRangeIndex !== -1;
 
+      if (isShutdowned) {
+        const targetRange = [
+          ranges[targetRangeIndex],
+          ranges[targetRangeIndex + 1],
+        ];
         const { output } = giveDiffLog(dayjs(nextTime).diff(dayjs()));
 
-        const prefix = `[${dayjs().format(format)}]`;
+        const prefix = `[${dayjs().format(format)}]: `;
 
         console.log(
           chalk.yellow(
-            `${prefix} Sleeping for ${output} (${nextTime.format(format)})`
+            `${prefix}Sleeping for ${output} (${nextTime.format(format)})`
           )
         );
         console.log(
           chalk.yellow(
-            `${" ".repeat(prefix.length)} Shutdown bounds: [${dayjs(
-              range[0]
-            ).format(format)} | ${dayjs(range[1]).format(format)}]`
+            `${" ".repeat(prefix.length)}Shutdown bounds number ${Math.floor(
+              targetRangeIndex / 2
+            )}: [${dayjs(targetRange[0]).format(format)} | ${dayjs(
+              targetRange[1]
+            ).format(format)}]`
           )
         );
 
@@ -113,9 +121,13 @@ const runFormPeriodic = async (
           formFlow({
             flowPrefix: counter,
             ...flowConfig,
-          }).then(() => {
-            logTime(nextTime);
-          });
+          })
+            .then(() => {
+              logTime(nextTime);
+            })
+            .catch(() => {
+              counter--;
+            });
 
           counter++;
           resolve();
